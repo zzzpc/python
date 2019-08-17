@@ -1,0 +1,65 @@
+# -*- coding:utf-8 -*-
+import re
+import requests
+from threading import Thread
+from bs4 import  BeautifulSoup
+import  time
+
+class MyThread(Thread):
+    def __init__(self, func, args):
+        super(MyThread, self).__init__()
+        self.func = func
+        self.args = args
+
+    def run(self):
+        self.result = self.func(*self.args)
+
+    def get_result(self):
+        try:
+            return self.result
+        except Exception:
+            return None
+def download(string,i):
+    try:
+        pic = requests.get(string, timeout=10)
+    except requests.exceptions.ConnectionError:
+        print('【错误】当前图片无法下载')
+        pass
+    dir = 'images/' + keyword + '_' + str(i)+ '.jpg'
+    fp = open(dir, 'wb')
+    fp.write(pic.content)
+    fp.close()
+
+def dowmloadPic(html, keyword,i):
+    pic_url = re.findall('data-src="(.*?)"', html, re.S)
+    print('找到关键词:' + keyword + '的图片，现在开始下载图片...')
+    threads = []
+    for each in pic_url:
+        t = MyThread(func=download,args = [each,i])
+        t.start()
+        threads.append(t)
+        print('正在下载第' + str(i) + '张图片，图片地址:' + str(each))
+        i += 1
+    for t in threads:
+        t.join()
+def getHTML(keyword,num):
+    url = 'https://wallhaven.cc/search?&categories=111&purity=100&sorting=relevance&order=desc&q=' + keyword + '&page=' + str(
+        num)
+    result = requests.get(url)
+    result.encoding = result.apparent_encoding
+    demo = result.text
+    return demo
+if __name__ == '__main__':
+    num=1
+    keyword='girl'
+    i=1
+    kv={'word':keyword,'pn':i}
+    time1 = time.time()
+    threads2 = []
+    for i in range(3):
+        t=MyThread(func=getHTML,args=[keyword,num])
+        t.start()
+        dowmloadPic(t.func(keyword,num),keyword,num)
+        num+=30
+    time2=time.time()
+    print (time2-time1)
